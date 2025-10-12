@@ -1,0 +1,38 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowS3BucketCreation",
+            "Effect": "Allow",
+            "Action": [
+                "s3:CreateBucket",
+                "s3:ListAllMyBuckets",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "AllowRearcQuestBucketOperations",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetBucket*",
+                "s3:PutBucket*",
+                "s3:DeleteBucket*",
+                "s3:PutEncryptionConfiguration*",
+                "s3:GetEncryptionConfiguration"
+            ],
+            "Resource": "arn:aws:s3:::bucket-rearc-quest-*"
+        },
+        {
+            "Sid": "AllowRearcQuestObjectOperations",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject*",
+                "s3:PutObject*",
+                "s3:DeleteObject*"
+            ],
+            "Resource": "arn:aws:s3:::bucket-rearc-quest-*/*"
+        }
+    ]
+}
