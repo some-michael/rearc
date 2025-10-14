@@ -1,0 +1,248 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Rearc Quest S3 and Lambda Infrastructure as Code'
+
+Resources:
+  #S3 Bucket
+  S3BucketBucketrearcquestmmorris:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Retain"
+    Properties:
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: false
+        IgnorePublicAcls: false
+        BlockPublicPolicy: false
+        BlockPublicAcls: false
+      BucketName: "bucket-rearc-quest-mmorris"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: false
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+      Tags:
+      - Value: "rearc-quest"
+        Key: "resource-group"
+
+  # EventBridge Rule for Daily Execution
+  DailyScheduleRule:
+    Type: "AWS::Events::Rule"
+    Properties:
+      Name: "rearc-quest-daily-schedule"
+      Description: "Trigger Lambda function daily at 8:00 AM UTC"
+      ScheduleExpression: "cron(0 8 * * ? *)"  # Daily at 8:00 AM UTC
+      State: "ENABLED"
+      Targets:
+        - Arn: !GetAtt LambdaFunctionFunctionrearcquestmmorrisingestbls.Arn
+          Id: "RearcQuestLambdaTarget"
+          Input: '{"source": "eventbridge-schedule", "trigger": "daily"}'
+
+  # Permission for EventBridge to invoke Lambda
+  LambdaInvokePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName: !Ref LambdaFunctionFunctionrearcquestmmorrisingestbls
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt DailyScheduleRule.Arn
+
+  # Lambda Function with Updated Code
+  LambdaFunctionFunctionrearcquestmmorrisingestbls:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::Lambda::Function"
+    DeletionPolicy: "Retain"
+    Properties:
+      MemorySize: 256 
+      Description: "Rearc Quest BLS data ingestion function"
+      TracingConfig:
+        Mode: "PassThrough"
+      Timeout: 60  
+      Handler: "index.lambda_handler"
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import urllib3
+          import re
+          from botocore.exceptions import ClientError
+          from urllib.parse import urlparse
+
+          # Initialize S3 client
+          s3_client = boto3.client('s3')
+
+          # Initialize HTTP client
+          http = urllib3.PoolManager()
+
+          # hardcoded values - would not be used in production
+          bucket_name = 'bucket-rearc-quest-mmorris'
+          bucket_directory = 'bls_data' # for simplicity, this directory will be deleted to ensure synchronization from the BLS source on each run
+          user_agent="AWS-Lambda-DirectoryParser/1.0 (urllib3; Python/3.13; michaelmorris+bls@gmail.com)"
+          bls_url="https://download.bls.gov/pub/time.series/pr/"
+
+          # get base url of BLS - this is a bit of an oversimplification due to not handling possible roots other than /
+          parsed_bls = urlparse(bls_url)
+          bls_base = f"{parsed_bls.scheme}://{parsed_bls.netloc}"
+
+          # set headers for BLS requests
+          headers = {
+                  'User-Agent': user_agent,
+                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                  'Accept-Language': 'en-US,en;q=0.5',
+                  'Accept-Encoding': 'gzip, deflate',
+                  'Cache-Control': 'no-cache'
+              }
+
+          def get_directory(url, headers):
+              """List contents of the passed directory."""
+
+              try:
+                  response = http.request('GET', url, headers=headers)
+                  status_code = response.status
+                  html_content = response.data.decode('utf-8')
+
+                  return html_content
+              
+              except NameError as e:
+                  raise Exception(f"NameError occurred: {str(e)}")
+
+              except Exception as e:
+                  raise
+
+          def get_file_by_url(url, headers):
+              """Get a single file by its url."""
+
+              try:
+                  response = http.request('GET', url, headers=headers)
+                  return response
+              
+              except Exception as e:
+                  raise
+
+          def parse_html_content(html_content):
+              """Parse specifically the BLS Apache directory structure."""
+              pattern = r'(\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}\s+[AP]M)\s+(\d+)\s+<A HREF="([^"]+)">([^<]+)</A>'
+
+              return [
+                  {
+                      'filename': match[3],
+                      'url': f"{bls_base}{match[2]}",
+                      'last_modified': match[0],
+                      'size': int(match[1])
+                  }
+                  for match in re.findall(pattern, html_content)
+              ]
+
+          def copy_http_files_to_s3(bucket, directory, headers, parsed_file_list):
+
+              # Clean the output directory first for synchronization
+              deleted_count = delete_s3_folder(bucket, f"{directory}/")
+
+              try:
+                  output_list = []
+
+                  for file in parsed_file_list:
+                      file_copied = {}
+                      file_response = get_file_by_url(file["url"], headers)
+
+                      response = s3_client.put_object(
+                          Bucket=bucket,
+                          Key=f'{directory}/{file["filename"]}',
+                          Body=file_response.data,
+                          ContentType=file_response.headers.get('content-type', 'application/octet-stream')
+                      )
+
+                      file_copied["filename"] = file["filename"]
+                      file_copied["status"] = response['ResponseMetadata']['HTTPStatusCode']
+
+                      output_list.append(file_copied)
+              
+                  return output_list
+              
+              except ClientError as e:
+                  raise
+
+          def delete_s3_folder(bucket, folder_prefix):
+              """Delete all objects in an S3 'folder' (prefix)."""
+              try:
+                  response = s3_client.list_objects_v2(
+                      Bucket=bucket,
+                      Prefix=folder_prefix
+                  )
+                  
+                  if 'Contents' not in response:
+                      return 0
+                  
+                  objects_to_delete = [{'Key': obj['Key']} for obj in response['Contents']]
+                  
+                  if objects_to_delete:
+                      delete_response = s3_client.delete_objects(
+                          Bucket=bucket,
+                          Delete={
+                              'Objects': objects_to_delete,
+                              'Quiet': False
+                          }
+                      )
+                      
+                      deleted_count = len(delete_response.get('Deleted', []))
+                      
+                      return deleted_count
+                      
+              except ClientError as e:
+                  raise
+
+          def lambda_handler(event, context):
+              
+              try:
+                  
+                  file_list = get_directory(bls_url, headers)
+                  parsed_file_list = parse_html_content(file_list)
+                  
+                  copied_file_list = copy_http_files_to_s3(bucket_name, bucket_directory, headers, parsed_file_list)
+
+                  return {
+                      'statusCode': 200,
+                      'body': json.dumps({
+                          'message': f'BLS data ingestion completed successfully, files copied={len(copied_file_list)}',
+                          'copied_file_list': copied_file_list,
+                          'trigger_source': event.get("source", "manual")
+                      })
+                  }
+                  
+              except Exception as e:
+                  raise
+      Role: "arn:aws:iam::054178830715:role/rearc-quest-lambda-basic-execution-role"
+      FileSystemConfigs: []
+      FunctionName: "function-rearc-quest-mmorris-ingest-bls"
+      Runtime: "python3.13"
+      PackageType: "Zip"
+      LoggingConfig:
+        LogFormat: "Text"
+        LogGroup: "/aws/lambda/function-rearc-quest-mmorris-ingest-bls"
+      EphemeralStorage:
+        Size: 512
+      Tags:
+      - Value: "rearc-quest"
+        Key: "resource-group"
+      Architectures:
+      - "x86_64"
+
+Outputs:
+  S3BucketName:
+    Description: "Name of the S3 bucket"
+    Value: !Ref S3BucketBucketrearcquestmmorris
+    Export:
+      Name: "RearcQuest-S3Bucket"
+      
+  LambdaFunctionName:
+    Description: "Name of the Lambda function"
+    Value: !Ref LambdaFunctionFunctionrearcquestmmorrisingestbls
+    Export:
+      Name: "RearcQuest-LambdaFunction"
+      
+  ScheduleRuleName:
+    Description: "Name of the EventBridge schedule rule"
+    Value: !Ref DailyScheduleRule
+    Export:
+      Name: "RearcQuest-ScheduleRule"

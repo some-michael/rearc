@@ -165,11 +165,59 @@ Looks like AWS lingo uses 'destination' as a streaming/message/queue output hand
 
 - [ ] Add lambda function destination for SQS queue
 
+Q prompt: *What do I need to add to a lambda function to connect to an S3 bucket*
+
+> **AI Note:** I am treating Q like we used to treat StackOverflow, in other words I would have typically looked for example Python code that makes the connection, then looked at the documentation for the objects to add status codes extraction. Fortunately it can find and generate code snippets for the status code syntax much faster than I can search and read. (You just have to test and make sure it isn't halucinating! Test early and often - don't let it write 1000 lines like Claude always wants to.) This is consistent with the goal of using AI as a multiplier not a crutch.
+
 I added an S3 SDK example function call to list files in the bucket and write a test file. It required another permission on the lambda role, similar to using user managed identity in Azure. I am not sure yet if I should be including the permissions in the Cloudformation stack, or if environment variables with keys would be a better solution (do keys exist in S3?)
 
-- [ ] Examine adding permissions to the lambda execution role via Cloudformation template
+- [ ] Examine adding permissions to the lambda execution role via Cloudformation template. Maybe have to put the role itself in the stack?
 
 > **Production Note:** I have the bucket name hard coded at the moment in the function. This is obviously not production ready. I would use environment variables, a metadata database source, or possibly send the value in the trigger event (would need to solve security concern in this case of course). It doesn't seem instructive to solve at this stage however.
 
+#### 2. Connect to BLS Source
 
+I immediately considered using Beautiful Soup for the BLS file download portion. However, I suspect it could be too heavy for a simple file index. In the Linux shell I probably have used wget to list the files and their properties, so perhaps there is something like that for Python.
+
+Q prompt *Is there a python library easily available in Lambda functions that can get a list of files from a simple Apache directory structure index, along with their properties, similar to wget on Linux?*
+
+From this suggestion I chose urllib3 as it is available without adding additional dependencies. I added the User-Agent header and got the html_content response from a test. 
+
+#### 3. Parse BLS source file list
+
+For speed, I then asked Q to create a parsing regex. This wouldn't be the most robust approach but should suffice here. (I am thankful for not needing to hand write regex anymore!)
+
+Claude prompt *What regex can I use to parse this html_content into a list of files, with their urls and last modified times?* (included raw html output from urllib http.request().data.decode())
+
+> **Note**: Around here Q started slowing down quite a bit, presumably the Free Tier was running out or being otherwise heavily used. That's ok, its pretty much Pythonic from here.
+
+#### 4. Write BLS files to S3 Bucket
+
+Now I just needed to combine the file list with the S3 upload already proven out. I wrote a simple iterator over the list of file dicts already parsed.
+
+> **Production Note: At this stage I decided to cut out incremental comparisons and start moving faster through the quest. It would, however, be best to store the last modified dates of the files on the BLS source, and compare them to the current dates from the daily execution. Perhaps there is a way to fake up dates on S3 buckets, like `touch` in *nix, so that a database or other store is not needed?
+
+#### 5. Establish Sync Operation
+
+Once the upload tested successfully, I just need to delete the output destination folder prior to performing the upload. Since there is no hierarchical namespace in S3 buckets, it looks like objects to be deleted must be discovered by prefix (a la blob storage). I decided in the interest of time to prompt this task to Claude:
+
+Claude prompt: *Write a Python function using the boto3 s3_client that can delete all the files in a given bucket with a given folder prefix.*
+
+After adding and testing the file deletion function, its time to add a trigger and combine the code with the IaC template.
+
+#### 6. Add daily execution trigger
+
+Again working to speed up, gave Claude the prompt: *What do I add to an AWS Cloudformation template to include a daily execution trigger for a Lambda function?* 
+
+I chose the direct approach in the YAML template because I am still working toward the Part 4 automation, and know I can execute a stack change set to deploy it.
+
+#### 7. Lambda function CloudFormation template update
+
+I pasted the updated Lambda function code into the template as well (Again knowing this is a non-production operation for development speed.)
+
+> **Note**: At this point I started getting failures on permissions on deploying the stack updates. Attempting to allow the Lambda Powertools layer was triggering a permissions error, even when running as the root user. Removed the logging from the template version of the Lambda function in order to keep going. I had to execute the stack as the root user to avoid another 'events' schema permissions error as well.
+
+I also ran into an issue with the Code: Zipfile syntax appearing to upload the file as 'index.py' despite having  `Handler: "lambda_function.lambda_handler"` defined in the template. Probably there is some ticky problem I am missing here, so I fixed it in the console.
+
+## Part 2 Approach
 
