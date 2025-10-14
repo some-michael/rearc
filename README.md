@@ -221,3 +221,34 @@ I also ran into an issue with the Code: Zipfile syntax appearing to upload the f
 
 ## Part 2 Approach
 
+Reviewing the API documentation (it feels a little light, like something has been removed. The cited urls in the docs give a 404, the one given in the Quest has to be used. Strange) it seems that the functions already developed for the BLS data can be reused.
+
+1. Test file extraction from the DataUSA endpoing
+2. Sidejack the datausa file extraction into the BLS methods
+3. Update function code to place data in separate directories on the S3 bucket
+4. Update CloudFormation template with new inline code
+
+### 1. Test DataUSA file extraction
+
+The `get_file_by_url()` function did work as expected to extract the file content from the API endpoint.
+
+### 2. Use BLS methods with DataUSA API structure
+
+No modifications are needed to the `copy_http_files_to_s3()` method if the same list of dicts of files to ingest format is followed. The URL can be constructed from the supplied values, and a filename must be manufactured (allow the user to set it in the hardcoded values section). The file date (unused at this point due to skipping incremental updates) is 'now', and the file size is unknown (and also unused at this point).
+
+### 3. Separate Data Outputs between sources
+
+A very minor modificaiton is needed to hardcoded values to have two landing zones for files in the bucket, and then a second call to `copy_http_files_to_s3()` with the manually constructed file list to process can be added to get the DataUSA file.
+
+### 4. Finalize Function, update IaC and Deploy
+
+I wanted to do a bit of cleanup and documentation for the completed function. Claude excels at this, both in prompt mode (*Help me write standardized documentation for this Python Lambda function*) and in code-completion mode while I added comments for each function.
+
+In the IaC update I decided to to go with the flow for the function handler and use `Handler: "index.lambda_handler"` since the CloudFormation process with inline code seems to use the 'index.py' name. This solved my remaining deployment problem (along with sticking with running as root user to avoid permissions issues).
+
+I now have the final files for part 1 and part 2, plus part 0 and 1 of part 4.
+
+**Cloudformation template file:** [`cloudformation/rearc-quest-template.yml`](cloudformation/rearc-quest-template.yml)
+**Lambda function python code:** [`lambda-function/function-rearc-quest-mmorris-ingest.py`](lambda-function/function-rearc-quest-mmorris-ingest.py)
+
+> **Note**: This part went very fast after the hard work getting Part 1 and Part 0/1 of Part 4 going. It was rewarding to just write a few simple lines and have exactly what was needed. It didn't *feel* like much of an API assignment, not that I am complaining!
