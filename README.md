@@ -49,7 +49,7 @@ Items to solve in approximate order:
 - [x] AWS S3 Bucket
 - [x] AWS Lambda Functions resource
 - [X] AWS Lambda Functions local dev
-- [ ] AWS Lambda Functions Spark instance/access
+- [ ] AWS Spark instance/access
 - [X] AWS IaC
 - [ ] AWS SQS Queue resource
 - [ ] AWS SQS Queue pub/sub
@@ -252,3 +252,30 @@ I now have the final files for part 1 and part 2, plus part 0 and 1 of part 4.
 **Lambda function python code:** [`lambda-function/function-rearc-quest-mmorris-ingest.py`](lambda-function/function-rearc-quest-mmorris-ingest.py)
 
 > **Note**: This part went very fast after the hard work getting Part 1 and Part 0/1 of Part 4 going. It was rewarding to just write a few simple lines and have exactly what was needed. It didn't *feel* like much of an API assignment, not that I am complaining!
+
+## Part 3 Approach
+
+I much prefer Spark (Databricks, Synapse if you have to) to Pandas. Let's see how we can easily run it in AWS.
+
+Q prompt: *What is the simplest and cheapest approach to run PySpark code, preferably in a Jupyter notebook format, within AWS?*
+
+Q suggests AWS Glue Studio for a serverless Spark notebook environment. 
+
+Looking forward to requirement 3 of Part 4, I need to be sure my choice of Spark is not too restrictive, i.e. that a Glue job or another similar approach can be triggered from an SQS queue.
+
+Q prompt: *Can an AWS Glue job be triggered from an SQS queue message? What would be required to set it up?*
+
+Q suggests adding a SQS queue message trigger to a Lambda function, which then calls a Glue job. This sounds reasonable - SQS triggers exist for Lambda functions (verified in the interface) and a quick review of documentation shows Q is not hallucinating the Lambda function library to interact with a Glue job. So this seems like a qualified approach.
+
+1. Get AWS Glue Studio set up
+2. Build Jupyter notebook for Part 3 data analysis
+3. Convert Jupyter notebook into a Glue job.
+4. Build new Lambda function to trigger Glue job.
+5. Add the SQS queue trigger (probably in Part 4, after adding the message sending notification for file addition)
+
+### 1. Glue Studio
+
+It looks like a new role is needed to access the S3 bucket. I added one with a trust relationship to Glue and the same access policy to S3 as the restricted user and the Lambda role, and granted the AssumeRole like the Lambda function. Opening a new Glue Studio notebook, I get an authentication failed error. After some more troubleshooting, I get a helpful error in the cloud shell: "An error occurred (AccessDenied) when calling the AssumeRole operation: Roles may not be assumed by root accounts." I guess all the work to get a restricted user setup was less in vain than I was beginning to worry. 
+
+Well, after a lot of trying and removing roles and policies and adding and removing permissions, I cannot get Glue to work at all. Root users aren't allowed to assume roles and all the documentation points to the setup being correct, and CloudWatch is logging nothing. Despite assurances that Glue can be accessed by trial accounts, I am starting to think something of that sort is the true limitation.
+
