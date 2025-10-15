@@ -279,3 +279,35 @@ It looks like a new role is needed to access the S3 bucket. I added one with a t
 
 Well, after a lot of trying and removing roles and policies and adding and removing permissions, I cannot get Glue to work at all. Root users aren't allowed to assume roles and all the documentation points to the setup being correct, and CloudWatch is logging nothing. Despite assurances that Glue can be accessed by trial accounts, I am starting to think something of that sort is the true limitation.
 
+## Part 3 Approach - Take 2
+
+In the interest of time (again), I moved over to locally running pandas to do the data analysis. The file is at:
+
+**Jupyter Data Analysis Notebook:** [`jupyter-notebook/notebook-rearc-quest-mmorris.ipynb`](jupyter-notebook/notebook-rearc-quest-mmorris.ipynb)
+
+This file goes through the steps and approaches to solve the 4 parts of the 3rd part of the Quest.
+
+## Part 4
+
+Unfortunately the quagmire of AWS Glue blew up my appoach to solve #3 of Part 4. 
+
+Fortunately, I had worked from the end state backward, and so #0 and #1 are already complete!
+
+### Part 4 #2
+**What I would have done**
+
+S3 buckets document that they can send notifications on file additions. I would have:
+- Added the SQS queue resource
+- Used the console to add the notification from the S3 bucket to the queue
+- Re-exported the Cloudformation template to get a change set for the stack, so that the IaC codebase includes the notification and the SQS queue 
+
+### Part 4 #3
+**What I would have done**
+
+This is a bit trickier, given the unavailability of Glue as planned above. Since I wrote CSV outputs into the notebook in Part 3, these would need to be modified to output back to S3. I didn't build a custom function to write the files, so I would create a quick function that can be called to output a given file to the bucket, to avoid that bit of code duplication.
+
+For triggering, my original plan to subscribe a Lambda function to the SQS queue messages would have held. However, it would need to run the notebook code instead of the Glue trigger.
+
+Obviously, I would have to solve running Pandas in a Lambda function, and getting that to work in the IaC template (which I abandoned earlier, trying to use the Cloudtools logger framework layer). There is the minor wrinkle of `.ipynb` vs `.py` code, so I would need to remove or conditionally run the `.head()` and dataframe displays only when being used interactively.
+
+Similarly, subscribing the Lambda function to the queue via the console, and generating and updating the Cloudformation template, *should have* worked.
