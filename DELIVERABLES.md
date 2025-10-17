@@ -16,11 +16,14 @@ This document is a short index to the output files for the Quest. The long form 
 
 ## 1. S3 data and Source Code (Step 1)
 Python code for Lamda function:
+
 **Lambda function python code:** [`lambda-function/function-rearc-quest-mmorris-ingest.py`](lambda-function/function-rearc-quest-mmorris-ingest.py)
 
 Output to S3 bucket:
-**BLS Data Bucket:** [`https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/'](https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/)
-**Example: pr.data.0.current file:** [`https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/bls_data/pr.data.0.Current'](https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/bls_data/pr.data.0.Current)
+
+**BLS Data Bucket:** [`https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/`](https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/)
+
+**Example: pr.data.0.current file:** [`https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/bls_data/pr.data.0.Current`](https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/bls_data/pr.data.0.Current)
 
 ## 2. Source Code (Step 2)
 
@@ -28,7 +31,8 @@ Also contained in the same Lambda function code:
 **Lambda function python code:** [`lambda-function/function-rearc-quest-mmorris-ingest.py`](lambda-function/function-rearc-quest-mmorris-ingest.py)
 
 Output to S3 bucket:
-**DataUSA JSON file:** [`https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/datausa_data/datausa_acs_yg_total_population_1.json'](https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/datausa_data/datausa_acs_yg_total_population_1.json)
+
+**DataUSA JSON file:** [`https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/datausa_data/datausa_acs_yg_total_population_1.json`](https://bucket-rearc-quest-mmorris.s3.us-east-2.amazonaws.com/datausa_data/datausa_acs_yg_total_population_1.json)
 
 ## 3. Source code (.ipynb) and results (Step 3)
 
