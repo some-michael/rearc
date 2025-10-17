@@ -1,0 +1,186 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowLambdaListOperations",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:ListFunctions",
+                "lambda:ListEventSourceMappings",
+                "lambda:ListLayers",
+                "lambda:ListLayerVersions",
+                "lambda:ListCodeSigningConfigs",
+                "lambda:GetAccountSettings"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "AllowCreateFunctionWithRequiredTag",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:CreateFunction"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:RequestTag/resource-group": "rearc-quest"
+                }
+            }
+        },
+        {
+            "Sid": "AllowLambdaManagementOperations",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:GetFunction",
+                "lambda:GetFunctionConfiguration",
+                "lambda:GetFunctionCodeSigningConfig",
+                "lambda:GetFunctionConcurrency",
+                "lambda:GetFunctionEventInvokeConfig",
+                "lambda:GetFunctionUrlConfig",
+                "lambda:UpdateFunctionCode",
+                "lambda:UpdateFunctionConfiguration",
+                "lambda:UpdateFunctionEventInvokeConfig",
+                "lambda:UpdateFunctionUrlConfig",
+                "lambda:DeleteFunction",
+                "lambda:DeleteFunctionCodeSigningConfig",
+                "lambda:DeleteFunctionConcurrency",
+                "lambda:DeleteFunctionEventInvokeConfig",
+                "lambda:DeleteFunctionUrlConfig",
+                "lambda:PutFunctionCodeSigningConfig",
+                "lambda:PutFunctionConcurrency",
+                "lambda:PutFunctionEventInvokeConfig",
+                "lambda:CreateFunctionUrlConfig",
+                "lambda:PublishVersion",
+                "lambda:CreateAlias",
+                "lambda:UpdateAlias",
+                "lambda:DeleteAlias",
+                "lambda:GetAlias",
+                "lambda:ListAliases",
+                "lambda:ListVersionsByFunction"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/resource-group": "rearc-quest"
+                }
+            }
+        },
+        {
+            "Sid": "AllowLambdaExecuteOperations",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:InvokeFunction",
+                "lambda:InvokeAsync"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/resource-group": "rearc-quest"
+                }
+            }
+        },
+        {
+            "Sid": "AllowLambdaTaggingOperations",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:TagResource",
+                "lambda:UntagResource",
+                "lambda:ListTags"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/resource-group": "rearc-quest"
+                }
+            }
+        },
+        {
+            "Sid": "AllowEventSourceMappingOperations",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:CreateEventSourceMapping",
+                "lambda:DeleteEventSourceMapping",
+                "lambda:GetEventSourceMapping",
+                "lambda:UpdateEventSourceMapping"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/resource-group": "rearc-quest"
+                }
+            }
+        },
+        {
+            "Sid": "AllowLambdaPermissionOperations",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:AddPermission",
+                "lambda:RemovePermission",
+                "lambda:GetPolicy"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/resource-group": "rearc-quest"
+                }
+            }
+        },
+        {
+            "Sid": "AllowUsingPredefinedExecutionRoles",
+            "Effect": "Allow",
+            "Action": [
+                "iam:PassRole",
+                "iam:GetRole",
+                "iam:ListRoles"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:role/rearc-quest-lambda-*",
+                "arn:aws:iam::*:role/*rearc-quest*"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "lambda.amazonaws.com"
+                }
+            }
+        },
+        {
+            "Sid": "AllowCloudWatchLogsOperations",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams"
+            ],
+            "Resource": "arn:aws:logs:*:*:*"
+        },
+        {
+            "Sid": "RestrictTagModification",
+            "Effect": "Deny",
+            "Action": [
+                "lambda:UntagResource"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "ForAllValues:StringEquals": {
+                    "aws:TagKeys": [
+                        "resource-group"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "AllowVPCOperations",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DeleteNetworkInterface",
+                "ec2:AttachNetworkInterface",
+                "ec2:DetachNetworkInterface"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
