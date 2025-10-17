@@ -43,9 +43,9 @@ Results are given in the /reports folder in this code tree:
 
 **Req 2 Best Years:** [`reports/part_3_req_2_best_years.csv`](reports/part_3_req_2_best_years.csv)
 
-**Req 3 First Quarter Combined Stats:** [`reports/part_3_req_3_first_qtr_combined.csv`])(reports/part_3_req_3_first_qtr_combined.csv)
+**Req 3 First Quarter Combined Stats:** [`reports/part_3_req_3_first_qtr_combined.csv`](reports/part_3_req_3_first_qtr_combined.csv)
 
-**Req 3 First Quarter Combined Stats Chart:** [`reports/part_3_req_3_labor_population_chart_PRS30006032_Q01.jpg`])(reports/part_3_req_3_labor_population_chart_PRS30006032_Q01.jpg)
+**Req 3 First Quarter Combined Stats Chart:** [`reports/part_3_req_3_labor_population_chart_PRS30006032_Q01.jpg`](reports/part_3_req_3_labor_population_chart_PRS30006032_Q01.jpg)
 
 ## 4. Source code for data pipeline IaC (Step 3)
 
